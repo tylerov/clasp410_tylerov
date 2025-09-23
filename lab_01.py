@@ -1,6 +1,28 @@
 #!/usr/bin/env python3
 ''' 
-Doc String - Description of what we are doing
+DOC STRING
+
+We are taking the foundations of earth’s atmosphere and answering questions about different 
+aspects and key elements of atmospheres in general. We hope to code a model of the atmosphere 
+that takes key elements such as albedo, solar irradiance, emissivity (epsilon), and N layers of 
+atmosphere, that returns temperatures at each layer of atmosphere (and surface). Making a model 
+that replicates this type of system, will be able to tell us a lot of things, not only about
+Earth, but about other planets as well. Throughout this lab report, it will be shown the different 
+ways you can use this model, and different questions you can answer with it. 
+
+There are multiple hypotheses that we will be trying to answer throughout this lab. Here is a list of them:
+
+How does the surface temperature of Earth depend on emissivity and number of layers?
+
+For an average Earth surface temperature of 288K, what does your model predict for the emissivity of Earth’s atmosphere? 
+
+Using an emissivity value of 0.255, how many layers of atmosphere are required to produce a surface temperature of ~288k?
+
+How many atmospheric layers do we expect on planet Venus? 
+
+How many perfectly absorbing layers do you need to match the surface temperature on Venus?
+
+What would Earth’s surface temperature be in a nuclear winter scenario? 
 '''
 '''
 TO REPRODUCE THE VALUES AND PLOTS IN MY REPORT, DO THIS:
@@ -11,10 +33,13 @@ TO REPRODUCE THE VALUES AND PLOTS IN MY REPORT, DO THIS:
 
 3. Run question3() to get graph
 3_2. Run question3_2() to get graph
+3_3. Run n_layer_atmosphere(5, 0.255)
 
-4. Run "n_layer_atmosphere_Q4(51)"
+4. Run "n_layer_atmosphere_Q4(69)"
+Part 2: run "n_layer_atmosphere(59)"
 
-5. Run "question5(5)"
+5. Run "n_layer_atmosphere_Q5()"
+Part 2: Run "question5(5)"
 '''
 
 import numpy as np
@@ -83,8 +108,11 @@ def question3():
     '''
     Plotting Surface Temperature vs Emissivity in a function for clarity when grading. 
     '''
+    #Making an array for temps
     temps_array = []
+    # Making a range for epsilon 
     epsilon_range = np.linspace(0.01, 1, 100)
+    # Making an iteration for the range of epislon to be able to make our graph
     for i in epsilon_range:
         plotted_temps = n_layer_atmosphere(nlayers = 1, epsilon = i)
         temps_array.append(plotted_temps[0])
@@ -116,7 +144,7 @@ def question3_2(nlayers = 5, epsilon = 0.255, albedo = 0.33, s0 = 1350):
     ax.grid(True)
     plt.show()
 
-def n_layer_atmosphere_Q4(nlayers, epsilon = 1., albedo = 0.6, s0 = 2600.):
+def n_layer_atmosphere_Q4(nlayers, epsilon = 1., albedo = 0.7, s0 = 2600.):
     
     '''
     Parameters
@@ -222,7 +250,7 @@ def n_layer_atmosphere_Q5(nlayers = 5, epsilon = 0.5, albedo = 0, s0 = 1350.):
 
     return final_Temp
 
-def question5(nlayers, epsilon = 0.5, albedo = 0.33, s0 = 1350):
+def question5(nlayers, epsilon = 0.5, albedo = 0, s0 = 1350):
     '''
     Plotting Temperature vs Altitude in a function for clarity when grading. 
     '''
