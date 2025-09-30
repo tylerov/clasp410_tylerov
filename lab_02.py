@@ -39,24 +39,43 @@ def dNdt_comp(t, N, a=1, b=2, c=1, d=3):
 
     return dN1dt, dN2dt
 
-def euler_solve(func, N1_init=.5, N2_init=.5, dT=.1, t_final=100.0):
+def euler_solve(func = dNdt_comp, N1_init=.3, N2_init=.6, dT=.1, t_final=100.0):
     '''
-    <Your good docstring here>
+    Solve an ordinary diffeq using Euler's Method.
+
     Parameters
     ----------
+    dfx: function
+        A function representing the time derivative of our diffeq. It should 
+        take one argument: the current time and return 1 value: the time derivative
+        at time 't'
+    f0: float
+        Initial condition for our differential equation
     func : function
-    A python function that takes `time`, [`N1`, `N2`] as inputs and
-    returns the time derivative of N1 and N2.
-    N1_init : float
-    <more good docstring here>
+        A function that takes `time`, [`N1`, `N2`] as inputs and
+        returns the time derivative of N1 and N2.
+    N1_init: float
+        <more good docstring here>
+
+    
     '''
-    # Important code goes here #
+    
+    time = np.arange(0, t_final, dT)
+    N1 = np.zeros(time.size) 
+    N1[0] = N1_init
+    N2 = np.zeros(time.size) 
+    N2[0] = N2_init
 
     for i in range(1, time.size):
-        dN1, dN2 = func(i, [N1[i-1], N2[i-1]] )
+        dN1, dN2 = func(i, [N1[i-1], N2[i-1]])
+        N1[i] = N1[i - 1] + dT * dN1
+        N2[i] = N2[i - 1] + dT * dN2
 
-def solve_rk8(func, N1_init=.5, N2_init=.5, dT=10, t_final=100.0,
-a=1, b=2, c=1, d=3):
+    return N1, N2, time 
+
+
+def solve_rk8(func = dNdt_comp, N1_init=.5, N2_init=.5, dT=10, t_final=100.0,
+              a=1, b=2, c=1, d=3):
     '''
     Solve the Lotka-Volterra competition and predator/prey equations using
     Scipy's ODE class and the adaptive step 8th order solver.
@@ -84,10 +103,26 @@ a=1, b=2, c=1, d=3):
 
     # Configure the initial value problem solver
     result = solve_ivp(func, [0, t_final], [N1_init, N2_init],
-    args=[a, b, c, d], method='DOP853', max_step=dT)
+                       args=[a, b, c, d], method='DOP853', 
+                       max_step=dT)
 
     # Perform the integration
     time, N1, N2 = result.t, result.y[0, :], result.y[1, :]
 
     # Return values to caller.
     return time, N1, N2
+
+def verification_plot():
+    fig, ax = plt.subplots(1,1, figsize=[10, 8])
+    N1, N2, time = euler_solve()
+    ax.plot(time, N1, label = 'N1')
+    ax.plot(time, N2, label = 'N2')
+    N1_rk8, N2_rk8, time_rk8 = solve_rk8()
+    ax.plot(time_rk8, N1_rk8, label = 'N1_rk8')
+    ax.plot(time_rk8, N2_rk8, label = 'N2_rk8')
+    ax.legend()
+    ax.set_xlabel('Time(years)')
+    ax.set_ylabel('Population/Carrying Capacity')
+    ax.set_title('Lotka-Volterra Predator-Prey Model')
+    fig.tight_layout()
+    plt.show()
