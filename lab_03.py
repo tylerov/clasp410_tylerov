@@ -22,8 +22,20 @@ sol10p3 = [[0.000000, 0.640000, 0.960000, 0.960000, 0.640000, 0.000000],
 # Convert to an array and transpose it to get correct ordering:
 sol10p3 = np.array(sol10p3).transpose()
 
+# Kangerlussuaq average temperature:
+t_kanger = np.array([-19.7, -21.0, -17., -8.4, 2.3, 8.4,
+                     10.7, 8.5, 3.1, -6.0, -12.0, -16.9])
 
-def solve_heat(x_stop = 1., t_stop = 0.2, dx = 0.2, dt = 1, c2 = 0.25,
+def temp_kanger(t):
+    '''
+    For an array of times in days, return timeseries of temperature for
+    Kangerlussuaq, Greenland.
+    '''
+    t_amp = (t_kanger - t_kanger.mean()).max()
+
+    return t_amp*np.sin(np.pi/180 * t - np.pi/2) + t_kanger.mean()
+
+def solve_heat(x_stop = 100, t_stop = 3650., dx = 1, dt = 1, c2 = 0.25,
                lowerbound = 0, upperbound = 0):
     '''
     A function for solving the heat equation
@@ -43,15 +55,14 @@ def solve_heat(x_stop = 1., t_stop = 0.2, dx = 0.2, dt = 1, c2 = 0.25,
     '''
 
     # C unit conversion from mm^2/s to m^2/day
-    newc2 = c2 / 1000 
-    newc2 = newc2 
+    c2_updated = c2 * 0.0864
 
     # Check our stability criterion:
-    dt_max = dx**2 / (2*c2)
+    dt_max = dx**2 / (2*c2_updated)
     if dt > dt_max:
        raise ValueError(f'DANGER: dt={dt} > dt_max = {dt_max}.')
 
-    # Get grid sizes ( +1 to include "0" as well)
+    # Get grid sizes (+ 1 to include "0" as well)
     N = int(t_stop / dt) + 1
     M = int(x_stop / dx) + 1
 
@@ -64,7 +75,7 @@ def solve_heat(x_stop = 1., t_stop = 0.2, dx = 0.2, dt = 1, c2 = 0.25,
     U[:,0] = 4*x - 4*x**2
 
     #Get our "r" coefficient
-    r = c2 * (dt/dx**2)
+    r = c2_updated * (dt/dx**2)
 
     # Solve our equation 
     for j in range(N-1):
@@ -86,7 +97,7 @@ def solve_heat(x_stop = 1., t_stop = 0.2, dx = 0.2, dt = 1, c2 = 0.25,
     # Return our pretty solution to the caller
     return t, x, U
 
-def plot_heatsolve(t, x, U, title = None, **kwargs):
+def plot_heatsolve(t, x, U, dt = 1, title = None, **kwargs):
     '''
     Plot the 2D solution for the 'solve_heat' function.
 
@@ -108,7 +119,7 @@ def plot_heatsolve(t, x, U, title = None, **kwargs):
     # Check our kwargs for defaults
     # Set defaults cmap to hot
     if 'cmap' not in kwargs:
-        kwargs['cmap'] = 'hot'
+        kwargs['cmap'] = 'seismic'
 
     # Create and configure figure and axes:
     fig, ax = plt.subplots(1, 1, figsize = (8,8))
@@ -120,8 +131,21 @@ def plot_heatsolve(t, x, U, title = None, **kwargs):
     # Add labels to stuff
     cbar.set_label(r'Temperature ($^{\circ}C$)')
     ax.set_xlabel('Time ($s$)')
-    ax.set_ylabel('Position ($m$)')
+    ax.set_ylabel('Depth ($m$)')
     ax.set_title(title)
+    # Set indexing for the final year of results:
+    loc = int(-365/dt) # Final 365 days of the result.
+
+    # Extract the min values over the final year:
+    winter = U[:, loc:].min(axis=1)
+    summer = U[:, loc:].max(axis=1)
+
+    #Create a temp profile plot:
+    fig, ax2 = plt.subplots(1, 1, figsize=(10, 8))
+    ax2.plot(winter, x, label='Winter')
+    ax2.plot(summer, x, label='Summer')
+    ax2.set_xlabel(r'Temperature ($^{\circ}C$)')
+    ax2.set_ylabel('Depth ($m$)')
 
     fig.tight_layout()
     plt.show()
