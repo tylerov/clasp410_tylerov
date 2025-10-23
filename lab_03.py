@@ -1,6 +1,48 @@
 #!/usr/bin/env python3
 '''
-Doc String
+Throughout the course of this report, the idea of forward difference solvers
+and how they can be applied to permafrost will be examined. Our example city 
+that will be used to examine and model their permafrost behavior will be from 
+Kangerlussuaq, Greenland. Throughout, we will see how different initial average 
+temperatures at the surface will affect the permafrost underground and how 
+different time steps, Δx, and rates of diffusion affect how stable our model is. 
+
+Hypotheses:
+1) Based on typical thermal diffusivity values for permafrost, what is the depth 
+   of the active layer and permafrost layer?
+2) With an initial condition of 0 degrees Celsius, how long does it take for the 
+   ground to reach a steady state?
+3) How does adding a 0.5, 1, and 3 degrees Celsius shift in Kangerlussuaq’s climate 
+   curve affect the depth and thickness of the active and permafrost layers?
+
+TO REPRODUCE THE VALUES AND PLOTS IN MY REPORT, DO THIS:
+
+1. To validate my code for problem 1; 
+    a) run lab_03.py
+    b) type into terminal:
+        i) t, x, U = solve_heat()
+        ii) Array printed should be same as the one in Dan's Report
+2. To get figures 1 and 2;
+    a) run lab_03.py
+    b) type into terminal:
+        i) t, x, U = solve_heat_Kanger()
+        ii) plot_heatsolve(t, x, U, vmin = -25, vmax = 25)
+3. To reproduce figure 3;
+    a) run lab_03.py
+    b) type into terminal:
+        i) t, x, U = solve_heat_Kanger(upperbound = 5.5)
+        ii) plot_heatsolve(t, x, U, vmin = -25, vmax = 25)
+4. To reproduce figure 4;
+    a) run lab_03.py
+    b) type into terminal:
+        i) t, x, U = solve_heat_Kanger(upperbound = 6)
+        ii) plot_heatsolve(t, x, U, vmin = -25, vmax = 25)
+5. To reproduce figure 5;
+    a) run lab_03.py
+    b) type into terminal:
+        i) t, x, U = solve_heat_Kanger(upperbound = 8)
+        ii) plot_heatsolve(t, x, U, vmin = -25, vmax = 25)
+
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,10 +84,21 @@ def solve_heat(x_stop = 1, t_stop = 0.2, dx = 0.2, dt = 0.02, c2 = 1,
 
     Parameters
     ----------
-    FILL THIS OUT AND DO NOT FORGET
+    x_stop: Floating point, defaults to 1
+        Telling our forward difference solver when to stop locationally
+    t_stop: Floating point, defaults to 0.2
+        Telling our forward difference solver when to stop given a t
+    dx: Floating point, defaults to 0.2
+        Our spatial step
+    dt: Floating point, defaults to 0.02
+        Our time step
+    c2: Floating point, defaults to 1
+        c^2, the square of the diffusion coefficient
+    lowerbound: Float, defaults to 0
+        Setting boundary conditions
+    upperbound: Float, defaults to 0
+        Setting boundary conditions
 
-    c2: Float
-        c^2, the square of the diffusion coeffiecient
     Returns
     -------
     x, t: 1D Numpy arrays
@@ -96,17 +149,28 @@ def solve_heat(x_stop = 1, t_stop = 0.2, dx = 0.2, dt = 0.02, c2 = 1,
     # Return our pretty solution to the caller
     return t, x, U
 
-def solve_heat_Kanger(x_stop = 100, t_stop = 3650, dx = 0.5, dt = 1, c2 = 0.25,
+def solve_heat_Kanger(x_stop = 100, t_stop = 36500, dx = 0.5, dt = 5, c2 = 0.25,
                       lowerbound = temp_kanger, upperbound = 5):
     '''
     A function for solving the heat equation
 
     Parameters
     ----------
-    FILL THIS OUT AND DO NOT FORGET
+    x_stop: Floating point, defaults to 1
+        Telling our forward difference solver when to stop locationally
+    t_stop: Floating point, defaults to 0.2
+        Telling our forward difference solver when to stop given a t
+    dx: Floating point, defaults to 0.2
+        Our spatial step
+    dt: Floating point, defaults to 0.02
+        Our time step
+    c2: Floating point, defaults to 1
+        c^2, the square of the diffusion coefficient
+    lowerbound: Float, defaults to 0
+        Setting boundary conditions
+    upperbound: Float, defaults to 0
+        Setting boundary conditions
 
-    c2: Float
-        c^2, the square of the diffusion coeffiecient
     Returns
     -------
     x, t: 1D Numpy arrays
@@ -156,20 +220,20 @@ def solve_heat_Kanger(x_stop = 100, t_stop = 3650, dx = 0.5, dt = 1, c2 = 0.25,
     
     # Print [U] to verify code
     print([U])
+
     # Return our pretty solution to the caller
     return t, x, U
 
-def plot_heatsolve(t, x, U, dt = 1, title = None, **kwargs):
+def plot_heatsolve(t, x, U, dt = 5, **kwargs):
     '''
     Plot the 2D solution for the 'solve_heat' function.
-
+    Plot the temperature profile for Kangerlussuaq
     Parameters
     ----------
     x, t: 1D Numpy arrays
         Space and time values, respectively
     U : Numpy array
         The solution of the heat equation, size is nSpace * nTime
-    title: str, set to None
 
     Returns
     -------
@@ -194,8 +258,8 @@ def plot_heatsolve(t, x, U, dt = 1, title = None, **kwargs):
     cbar.set_label(r'Temperature ($^{\circ}C$)')
     ax.set_xlabel('Time ($days$)')
     ax.set_ylabel('Depth ($m$)')
+    ax.set_title('Kangerlussuaq Permafrost Layers')
     plt.gca().invert_yaxis()
-    ax.set_title(title)
 
     # Set indexing for the final year of results:
     loc = int(-365/dt) # Final 365 days of the result.
@@ -206,12 +270,20 @@ def plot_heatsolve(t, x, U, dt = 1, title = None, **kwargs):
 
     #Create a temp profile plot:
     fig, ax2 = plt.subplots(1, 1, figsize=(10, 8))
+
+    # Plot the winter and summer temperatures
     ax2.plot(winter, x, label='Winter')
     ax2.plot(summer, x, '--', label='Summer')
     ax2.set_xlabel(r'Temperature ($^{\circ}C$)')
     ax2.set_ylabel('Depth ($m$)')
+    ax2.set_title('Temperature Profile')
+
+    # Invert y axis to get 0m at the top
     plt.gca().invert_yaxis()
 
+    # Plot this black line to give us permafrost layer
+    ax2.axvline(0, c = 'black', ls = '--')
+    
     fig.tight_layout()
     plt.show()
     return fig, ax, cbar
