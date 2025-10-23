@@ -258,7 +258,7 @@ def plot_heatsolve(t, x, U, dt = 5, **kwargs):
     cbar.set_label(r'Temperature ($^{\circ}C$)')
     ax.set_xlabel('Time ($days$)')
     ax.set_ylabel('Depth ($m$)')
-    ax.set_title('Kangerlussuaq Permafrost Layers')
+    ax.set_title('Ground Temp of Kangerlussuaq, Greenland')
     plt.gca().invert_yaxis()
 
     # Set indexing for the final year of results:
