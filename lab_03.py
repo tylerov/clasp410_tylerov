@@ -131,15 +131,16 @@ def solve_heat(x_stop = 1, t_stop = 0.2, dx = 0.2, dt = 0.02, c2 = 1,
     for j in range(N-1):
         U[1:M-1, j+1] = (1-2*r) * U[1:M-1, j] + r*(U[2:M, j] + U[:M-2, j])
         # Apply Neumann BC's
-        if lowerbound is None:
+        if lowerbound is None: # Neumann
             U[0, j + 1] = U[1, j + 1]
-        elif callable(lowerbound):
+        elif callable(lowerbound): # Dirichlet/constant
             U[0, j + 1] = lowerbound(t[j + 1])
         else: 
             U[0, j + 1] = lowerbound
-        if upperbound is None:
+
+        if upperbound is None: # Neumann
             U[-1, j + 1] = U[-2, j + 1]
-        elif callable(upperbound):
+        elif callable(upperbound): # Dirichlet/constant
             U[-1, j + 1] = upperbound(t[j + 1])
         else:
             U[-1, j + 1] = upperbound
