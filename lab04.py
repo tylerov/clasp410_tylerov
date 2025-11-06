@@ -11,7 +11,7 @@ very well.
 import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
-
+plt.style.use('fivethirtyeight')
 
 def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, pbare = 0.0):
     '''
@@ -46,9 +46,11 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
     else:
         # Set initial fire to center:
         forest[0, isize//2, jsize//2] = 3
-
+    
+    # Setting initial conditions for BARE/IMMUNE
     loc_bare = rand(isize, jsize) <= pbare
     forest[0, loc_bare] = 1
+    print(f"Starting with {loc_bare.sum()} points bare or immune")
 
     # Loop through time to advance our fire
     for k in range(nstep - 1):
@@ -62,17 +64,17 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
                     continue
                 # Spread fire in each direction
                 # Spread "up" (i to i-1)
-                if (pspread > rand()) and (forest[k, i - 1, j] == 2) and (i > 0):
+                if (pspread > rand()) and (i > 0) and (forest[k, i - 1, j] == 2)
                     forest[k + 1, i - 1, j] = 3
                 # Spread "down" (i to i+1)   
-                # if (pspread > rand()) and (forest[k, i + 1, j] == 2) and (i > 0):
-                #     forest[k + 1, i + 1, j] = 3
-                # # Spread "west" (j to j-1)
-                # if (pspread > rand()) and (forest[k, i, j - 1] == 2) and (i > 0):
-                #     forest[k + 1, i, j - 1] = 3
-                # # Spread "east" (j to j+1)
-                # if (pspread > rand()) and (forest[k, i, j + 1] == 2) and (i > 0):
-                #     forest[k + 1, i, j + 1] = 3
+                if (pspread > rand())  and (i < 0) and (forest[k, i + 1, j] == 2):
+                    forest[k + 1, i + 1, j] = 3
+                # Spread "west" (j to j-1)
+                if (pspread > rand()) and (forest[k, i, j - 1] == 2) and (j > 0):
+                    forest[k + 1, i, j - 1] = 3
+                # Spread "east" (j to j+1)
+                if (pspread > rand()) and (forest[k, i, j + 1] == 2) and (j < 0):
+                    forest[k + 1, i, j + 1] = 3
 
                 # Change burning to burnt
                 forest[k + 1, i, j] = 1
@@ -86,22 +88,28 @@ def plot_progression(forest):
     # Get total number of points
     ksize, isize, jsize = forest.shape
     npoints = isize * jsize
+    # Find all spots that are on fire (or infected)
+    # ... and count them as a function of time.
+    loc = forest == 3
+    on_fire = 100 * loc_forest.sum(axis=(1,2)) / npoints
 
     # Find all spots that are forest (or are healthy people)
-    # ... and count them as a function of time
-    loc_forest = forest == 2
+    # ... and count them as a function of time.
+    loc = forest == 2
     forested = 100 * loc_forest.sum(axis=(1,2)) / npoints
 
-    loc_forest = forest == 1
+    # Find all spots that are bare (or immune) and count
+    # ... them as a function of time. 
+    loc = forest == 1
     bare = 100 * loc_forest.sum(axis=(1,2)) / npoints
 
     plt.plot(forested, label = 'Forested')
     plt.plot(bare, label = 'Bare')
+    plt.plot(on_fire, label = 'On Fire')
     plt.xlabel('Time (arbitrary units)')
     plt.ylabel('Percent Total Forest')
     plt.show()
 
-
-def plot.forest2d():
+def plot_forest2d():
     pass 
 
