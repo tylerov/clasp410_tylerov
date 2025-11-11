@@ -11,6 +11,8 @@ very well.
 import numpy as np
 from numpy.random import rand
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+# Set plot style:
 plt.style.use('fivethirtyeight')
 
 def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, pbare = 0.0):
@@ -64,21 +66,25 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
                     continue
                 # Spread fire in each direction
                 # Spread "up" (i to i-1)
-                if (pspread > rand()) and (i > 0) and (forest[k, i - 1, j] == 2)
+                if (pspread > rand()) and (i > 0) and (forest[k, i - 1, j] == 2):
                     forest[k + 1, i - 1, j] = 3
                 # Spread "down" (i to i+1)   
                 if (pspread > rand())  and (i < 0) and (forest[k, i + 1, j] == 2):
                     forest[k + 1, i + 1, j] = 3
                 # Spread "west" (j to j-1)
-                if (pspread > rand()) and (forest[k, i, j - 1] == 2) and (j > 0):
+                if (pspread > rand()) and (j > 0) and (forest[k, i, j - 1] == 2):
                     forest[k + 1, i, j - 1] = 3
                 # Spread "east" (j to j+1)
-                if (pspread > rand()) and (forest[k, i, j + 1] == 2) and (j < 0):
+                if (pspread > rand()) and (j < 0) and (forest[k, i, j + 1] == 2):
                     forest[k + 1, i, j + 1] = 3
 
                 # Change burning to burnt
                 forest[k + 1, i, j] = 1
     return forest
+
+#FINISH THIS COMMENT
+colors = ['tan', 'forestgreen', 'crimson']
+forest_cmap = ListedColormap(colors)
 
 def plot_progression(forest):
     '''
@@ -110,6 +116,47 @@ def plot_progression(forest):
     plt.ylabel('Percent Total Forest')
     plt.show()
 
-def plot_forest2d():
-    pass 
+def plot_forest2d(forest_in, itime = 0):
+    '''
+    Given a forest of size (ntime, nx, ny), plot the itime-th moment 
+    as a 2D pcolor plot
+    '''
 
+    # Create figure and axes
+    fig, ax = plt.subplots(1, 1, figsize = (9, 8))
+
+    # Add our pcolor plot, save the resulting mappable object.
+    map = ax.pcolor(forest_in[itime, :, :], vmin = 1, vmax = 3, cmap = forest_cmap)
+
+    # Add a color bar by handing our mappable to the colorbar function.
+    cbar = plt.colorbar(map, ax = ax, shrink = 0.8, fraction = .08, location = 'bottom', orientation = 'horizontal')
+    cbar.set_ticks([1, 2, 3])
+    cbar.set_ticklabels(['Bare/Burnt', 'Forested', 'Burning'])
+
+    # Flip y-axis (Corresponding to the matrix's x direction)
+    # And label stuff
+    ax.invert_yaxis()
+    ax.set_xlabel('Eastward ($km$) $\\longrightarrow$')
+    ax.set_ylabel('Northward ($km$) $\\longrightarrow$')
+    ax.set_title(f'The Seven Acre Wood at T={itime:03d}')
+    plt.show()
+
+    # Return figure object to caller
+    return fig
+
+
+def make_all_2dplots(forest_in, folder = 'results/'):
+    '''
+    For every time frame in 'forest_in', create a 2D plot and sace the image in folder.
+    '''
+    import os
+    # Check to see if folder exists, if not, make it!
+    if not os.path.exists(folder):
+        os.mkdir(folder)
+    # Make a bunch of plots.
+    ntime, nx, ny = forest_in.shape
+    for i in range(ntime):
+        print(f"\tWorking on plot #{i:04d}")
+        fig = plot_forest2d(forest_in, itime = i)
+        fig.savefig(f"{folder}/forest_i{i:04d}.png")
+        plt.close('all')
