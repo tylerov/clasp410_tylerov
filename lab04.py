@@ -32,6 +32,12 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
     pbare: float, defaults to 0.0
         Set the chance that a point starts the simulation bare (or immune)
         from 0 to 1 (0% to 100%).
+
+    Returns:
+    --------
+    forest: array
+        An array that sets each point to an integer that correlates to 
+        bare, burning, or forested (or immune, infected, or healthy)
     '''
 
     # Creating a forest and making all spots have trees.
@@ -41,6 +47,7 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
     # Start with BURNING/INFECTED:
     if pignite > 0: # Scatter fire randomly: 
         loc_ignite = np.zeros((isize, jsize), dtype = bool)
+        # Debug to see how many points are on fire/infected at the start
         while loc_ignite.sum() == 0:
             loc_ignite = rand(isize, jsize) <= pignite
         print(f"Starting with {loc_ignite.sum()} points on fire or infected.")
@@ -82,7 +89,7 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
                 forest[k + 1, i, j] = 1
     return forest
 
-#FINISH THIS COMMENT
+# Set bare to tan, forest to forestgreen, and burning to crimson
 colors = ['tan', 'forestgreen', 'crimson']
 forest_cmap = ListedColormap(colors)
 
@@ -109,6 +116,7 @@ def plot_progression(forest):
     loc = forest == 1
     bare = 100 * loc_forest.sum(axis=(1,2)) / npoints
 
+    # Set labels 
     plt.plot(forested, label = 'Forested')
     plt.plot(bare, label = 'Bare')
     plt.plot(on_fire, label = 'On Fire')
@@ -155,6 +163,7 @@ def make_all_2dplots(forest_in, folder = 'results/'):
         os.mkdir(folder)
     # Make a bunch of plots.
     ntime, nx, ny = forest_in.shape
+    # Save plots to a folder
     for i in range(ntime):
         print(f"\tWorking on plot #{i:04d}")
         fig = plot_forest2d(forest_in, itime = i)
