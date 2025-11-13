@@ -6,6 +6,47 @@ The monte carlo represents the real world in a way that the average
 physical processes may be a good way of being represented, but if winds 
 are extremely high or easily catchable shrubs, then this model does not work
 very well. 
+
+TO REPRODUCE THE PLOTS IN MY REPORT: DO THIS:
+---------------------------------------------
+Figure 1: 
+    1. run lab04.py
+    2. type 'forest = forest_fires()'
+    3. type 'forest'
+Figure 2:
+    1. run lab04.py
+    2. type 'forest = forest_fires(jsize = 6)'
+    3. type 'forest'
+Figure 3: 
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pspread = 0.25)'
+    3. type 'plot_progression_forest(forest)'
+Figure 4:
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pspread = 0.5)'
+    3. type 'plot_progression_forest(forest)'
+Figure 5:
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pspread = 0.75)'
+    3. type 'plot_progression_forest(forest)'
+Figure 6: 
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pbare = 0.25, pignite = 0.05)'
+    3. type 'plot_progression_forest(forest)'
+Figure 7: 
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pbare = 0.5, pignite = 0.05)'
+    3. type 'plot_progression_forest(forest)'
+Figure 8: 
+    1. run lab04.py
+    2. type 'forest = forest_fires(nstep = 30, isize = 20, jsize = 30, 
+                                   pbare = 0.75, pignite = 0.05)'
+    3. type 'plot_progression_forest(forest)'
 '''
 
 import numpy as np
@@ -15,7 +56,8 @@ from matplotlib.colors import ListedColormap
 # Set plot style:
 plt.style.use('fivethirtyeight')
 
-def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, pbare = 0.0):
+def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, pbare = 0.0, 
+                pfatal = 0.0):
     '''
     Create a forest fire
 
@@ -27,17 +69,20 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
     pspread: float, defaults to 1.0
         Set chance that fire can spread in any direction from 0 to 1
     pignite: float, defualts to 0.0
-        Set the chance that a point starts the simulation on fire (or infected)
+        Set the chance that a point starts the simulation on fire (or sick)
         from 0 to 1 (0% to 100%).
     pbare: float, defaults to 0.0
         Set the chance that a point starts the simulation bare (or immune)
         from 0 to 1 (0% to 100%).
+    pfatal: float, defaults to 0.0
+        Set the chance that a sick person passes away from 0 to 1 
+        (0% to 100%). 
 
     Returns:
     --------
     forest: array
         An array that sets each point to an integer that correlates to 
-        bare, burning, or forested (or immune, infected, or healthy)
+        bare, burning, or forested
     '''
 
     # Creating a forest and making all spots have trees.
@@ -68,35 +113,40 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
         # Search every spot that is on fire and spread fire as needed.
         for i in range(isize):
             for j in range(jsize):
-                # Are we on fire?
+                # Are we sick/on fire?
                 if forest[k, i, j] != 3:
                     continue
-                # Spread fire in each direction
+                # Spread fire/disease in each direction
                 # Spread "up" (i to i-1)
                 if (pspread > rand()) and (i > 0) and (forest[k, i - 1, j] == 2):
                     forest[k + 1, i - 1, j] = 3
                 # Spread "down" (i to i+1)   
-                if (pspread > rand())  and (i < 0) and (forest[k, i + 1, j] == 2):
+                if (pspread > rand()) and (i < isize - 1) and (forest[k, i + 1, j] == 2):
                     forest[k + 1, i + 1, j] = 3
                 # Spread "west" (j to j-1)
+                if (pspread > rand()) and (j < jsize - 1) and (forest[k, i, j + 1] == 2):
+                    forest[k + 1, i, j + 1] = 3
+                # Spread "east" (j to j+1)
                 if (pspread > rand()) and (j > 0) and (forest[k, i, j - 1] == 2):
                     forest[k + 1, i, j - 1] = 3
-                # Spread "east" (j to j+1)
-                if (pspread > rand()) and (j < 0) and (forest[k, i, j + 1] == 2):
-                    forest[k + 1, i, j + 1] = 3
-
-                # Change burning to burnt
-                forest[k + 1, i, j] = 1
+                # If we are sick, did we die?
+                if (pfatal > rand()):
+                    # Change sick to dead
+                   forest[k + 1, i, j] = 0                
+                else:
+                    # Changing burned/sick to bare/immune
+                    forest[k + 1, i, j] = 1
     return forest
 
 # Set bare to tan, forest to forestgreen, and burning to crimson
 colors = ['tan', 'forestgreen', 'crimson']
 forest_cmap = ListedColormap(colors)
 
-def plot_progression(forest):
+def plot_progression_forest(forest):
     '''
     Calculate the time dynamics of a forest fire and plot them
     '''
+    fig, ax = plt.subplots(1, 1, figsize = (9, 8))
 
     # Get total number of points
     ksize, isize, jsize = forest.shape
@@ -104,24 +154,66 @@ def plot_progression(forest):
     # Find all spots that are on fire (or infected)
     # ... and count them as a function of time.
     loc = forest == 3
-    on_fire = 100 * loc_forest.sum(axis=(1,2)) / npoints
+    on_fire = 100 * loc.sum(axis=(1,2)) / npoints
 
     # Find all spots that are forest (or are healthy people)
     # ... and count them as a function of time.
     loc = forest == 2
-    forested = 100 * loc_forest.sum(axis=(1,2)) / npoints
+    forested = 100 * loc.sum(axis=(1,2)) / npoints
 
     # Find all spots that are bare (or immune) and count
     # ... them as a function of time. 
     loc = forest == 1
-    bare = 100 * loc_forest.sum(axis=(1,2)) / npoints
+    bare = 100 * loc.sum(axis=(1,2)) / npoints
+
+    # Set labels 
+    ax.plot(forested, label = 'Forested')
+    ax.plot(bare, label = 'Bare')
+    ax.plot(on_fire, label = 'On Fire')
+    ax.set_xlabel('Time (arbitrary units)')
+    ax.set_ylabel('Percent Total Forest')
+    ax.set_title('Total Forest vs Time')
+    ax.legend() 
+    fig.tight_layout()
+    plt.show()
+
+def plot_progression(forest):
+    '''
+    Calculate the time dynamics of a forest fire and plot them
+    '''
+    fig, ax = plt.subplots(1, 1, figsize = (9, 8))
+
+    # Get total number of points
+    ksize, isize, jsize = forest.shape
+    npoints = isize * jsize
+    # Find all spots that are on fire (or infected)
+    # ... and count them as a function of time.
+    loc = forest == 3
+    on_fire = 100 * loc.sum(axis=(1,2)) / npoints
+
+    # Find all spots that are forest (or are healthy people)
+    # ... and count them as a function of time.
+    loc = forest == 2
+    forested = 100 * loc.sum(axis=(1,2)) / npoints
+
+    # Find all spots that are bare (or immune) and count
+    # ... them as a function of time. 
+    loc = forest == 1
+    bare = 100 * loc.sum(axis=(1,2)) / npoints
+
+    # Find all spots that are on fire (or infected)
+    # ... and count them as a function of time.
+    loc = forest == 0
+    fatality = 100 * loc.sum(axis=(1,2)) / npoints
 
     # Set labels 
     plt.plot(forested, label = 'Forested')
     plt.plot(bare, label = 'Bare')
     plt.plot(on_fire, label = 'On Fire')
+    plt.plot(fatality, label = 'Deaths')
     plt.xlabel('Time (arbitrary units)')
     plt.ylabel('Percent Total Forest')
+    plt.legend() 
     plt.show()
 
 def plot_forest2d(forest_in, itime = 0):
@@ -152,6 +244,33 @@ def plot_forest2d(forest_in, itime = 0):
     # Return figure object to caller
     return fig
 
+def plot_forest2d_disease(forest_in, itime = 0):
+    '''
+    Given a forest of size (ntime, nx, ny), plot the itime-th moment 
+    as a 2D pcolor plot
+    '''
+
+    # Create figure and axes
+    fig, ax = plt.subplots(1, 1, figsize = (9, 8))
+
+    # Add our pcolor plot, save the resulting mappable object.
+    map = ax.pcolor(forest_in[itime, :, :], vmin = 0, vmax = 3, cmap = forest_cmap)
+
+    # Add a color bar by handing our mappable to the colorbar function.
+    cbar = plt.colorbar(map, ax = ax, shrink = 0.8, fraction = .08, location = 'bottom', orientation = 'horizontal')
+    cbar.set_ticks([0, 1, 2, 3])
+    cbar.set_ticklabels(['Deaths', 'Bare/Burnt', 'Forested', 'Burning'])
+
+    # Flip y-axis (Corresponding to the matrix's x direction)
+    # And label stuff
+    ax.invert_yaxis()
+    ax.set_xlabel('Eastward ($km$) $\\longrightarrow$')
+    ax.set_ylabel('Northward ($km$) $\\longrightarrow$')
+    ax.set_title(f'The Seven Acre Wood at T={itime:03d}')
+    plt.show()
+
+    # Return figure object to caller
+    return fig
 
 def make_all_2dplots(forest_in, folder = 'results/'):
     '''
