@@ -155,6 +155,7 @@ def forest_fire(nstep = 4, isize = 3, jsize = 3, pspread = 1.0, pignite = 0.0, p
         # Debug to see how many points are on fire/infected at the start
         while loc_ignite.sum() == 0:
             loc_ignite = rand(isize, jsize) <= pignite
+        # Debug statement
         print(f"Starting with {loc_ignite.sum()} points on fire or infected.")
         forest[0, loc_ignite] = 3
     else:
