@@ -86,13 +86,10 @@ def insolation(S0, lats):
     insolation : numpy array
     Insolation returned over the input latitudes.
     '''
-
     # Constants:
     max_tilt = 23.5 # tilt of earth in degrees
-
     # Create an array to hold insolation:
     insolation = np.zeros(lats.size)
-
     # Daily rotation of earth reduces solar constant by distributing the sun
     # energy all along a zonal band
     dlong = 0.01 # Use 1/100 of a degree in summing over latitudes
@@ -100,11 +97,9 @@ def insolation(S0, lats):
     angle[angle < 0] = 0
     total_solar = S0 * angle.sum()
     S0_avg = total_solar / (360/dlong)
-
     # Accumulate normalized insolation through a year.
     # Start with the spin axis tilt for every day in 1 year:
     tilt = [max_tilt * np.cos(2.0*np.pi*day/365) for day in range(365)]
-
     # Apply to each latitude zone:
     for i, lat in enumerate(lats):
         # Get solar zenith; do not let it go past 180. Convert to latitude.
@@ -112,9 +107,8 @@ def insolation(S0, lats):
         zen[zen > 90] = 90
         # Use zenith angle to calculate insolation as function of latitude.
         insolation[i] = S0_avg * np.sum(np.cos(np.pi/180. * zen)) / 365.
-        # Average over entire year; multiply by S0 amplitude:
-        insolation = S0_avg * insolation / 365
-
+    # Average over entire year; multiply by S0 amplitude:
+    insolation = S0_avg * insolation / 365
     return insolation
 
 def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.,
