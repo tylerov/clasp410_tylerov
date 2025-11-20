@@ -13,9 +13,8 @@ mxdlyr = 50.            # Depth of mixed layer (m)
 sigma = 5.67e-8         # Steffan Boltzman Constant
 C = 4.2e6               # Heat capacity of water
 rho = 1020              # Density of seat water (kg/m^3)
-lam = 100               # Diffusivity of the ocean (m^2/s)
 
-def gen_grid(npoints):
+def gen_grid(npoints=18):
     '''
     Create an evenly spaced latitudinal grid wit 'npoints' cell centers.
     Grid will always run from zero to 180 as the edges of the grid. This
@@ -37,7 +36,7 @@ def gen_grid(npoints):
     dlat = 180 / npoints # Latitude spacing.
     lats = np.linspace(dlat/2., 180-dlat/2., npoints) # Lat cell centers.
 
-
+    return dlat, lats
 
 def temp_warm(lats_in):
     '''
@@ -118,7 +117,9 @@ def insolation(S0, lats):
 
     return insolation
 
-def snowball_earth(nlat = 18, tfinal = 10,000., dt = 1.0):
+def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.,
+                   init_cond=temp_warm, apply_spherecorr = False, 
+                   apply_insol= False):
     ''' 
     Solve the snowball Earth problem. 
 
@@ -130,7 +131,19 @@ def snowball_earth(nlat = 18, tfinal = 10,000., dt = 1.0):
         Time length of simulation in years
     dt: int or float, defaults to 1.0
         Size of time step in years
-
+    lam: float, defaults to 100
+        Set ocean diffusivity
+    emiss: float, defaults to 1.0
+        Set emissivity of Earth
+    init_cond: function, float, or array
+        Set the initial condition of the smulation. If a function is given,
+        it must take latitudes as inputs and return temperature as a function
+        of lat. Otherwise, the given values are used as is. 
+    apply_spherecorr: Bool, defaults to False
+        Apply spherical correction term
+    apply_insol: Bool, defaults to False
+        Apply insolation term
+    
     Returns:
     ---------
     Lats: numpy array
@@ -141,13 +154,84 @@ def snowball_earth(nlat = 18, tfinal = 10,000., dt = 1.0):
     '''
     # Set up grid:
     dlat, lats = gen_grid(nlat)
+    # Y-spacing for cells in physical units
+    dy = np.pi * radearth / nlat
 
     # Set number of time steps:
     nsteps = int(tfinal / dt)
 
     # Set time step to seconds:
     dt = dt * 365 * 24 * 3600
+    
+    # Create Temp array; set initial condition
+    Temp = np.zeros(nlat)
+    if callable(init_cond):
+        Temp = init_cond(lats)
+    else:
+        Temp += init_cond
+    
+    # Create our k matrix
+    K = np.zeros((nlat, nlat))
+    K[np.arange(nlat), np.arange(nlat)] = -2
+    K[np.arange(nlat-1)+1, np.arange(nlat-1)] = 1
+    K[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    # Boundary Conditions
+    K[0, 1], K[-1, -2] = 2, 2
 
+    # Units!
+    K *= 1/dy**2
+
+    # Create our first derivative operator.
+    B = np.zeros((nlat, nlat))
+    B[np.arange(nlat-1)+1, np.arange(nlat-1)] = -1
+    B[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    B[0, :] = B[-1, :] = 0
+
+    # Create area array
+    Axz = np.pi * ((radearth + 50.0)**2 - radearth**2) * np.sin(np.pi/180.*lats)
+
+    # Get derivative of Area:
+    dAxz = np.matmul(B, Axz)
+
+    # Create and invert our L matrix
+    Linv = np.linalg.inv(np.eye(nlat) - dt * lam * K)
+
+    # Solve!
+    for istep in range(nsteps):
+        # Create spherical coordinates correction term
+        if apply_spherecorr:
+            spherecorr = (lam*dt) / (4*Axz*dy**2) * np.matmul(B, Temp)*dAxz
+        else:
+            spherecorr = 0
+        Temp = np.matmul(Linv, Temp + spherecorr)
+
+    return lats, Temp
+
+def problem1():
+    '''
+    Create solution figure for problem 1. Also validate our code 
+    qualitatively.
+    '''
+
+    # Get warm Earth initial condition
+    dlat, lats = gen_grid()
+    temp_init = temp_warm(lats)
+
+    # Get solution after 10K years for each combination of terms
+    lats, temp_diff = snowball_earth()
+    lats, temp_sphere = snowball_earth(apply_spherecorr=True)
+
+    # Create a fancy plot
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(lats - 90, temp_init, label = 'Initial condition')
+    ax.plot(lats - 90, temp_diff, label = 'Diffusion only')
+    ax.plot(lats - 90, temp_sphere, label = 'Diffusion + Spherical Coor.')
+    # Customize 
+    ax.set_title('Solution after 10,000 years')
+    ax.set_ylabel(r'Temp (${\circ}C$)')
+    ax.set_xlabel('Latitude')
+    ax.legend(loc = 'best')
+    plt.show()
 
 
 def test_functions():
