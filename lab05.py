@@ -1,7 +1,38 @@
 #!/usr/bin/env python3
 
 '''
-Doc String
+Throughout the course of this lab report, we will be uncovering the truth on if the entirety
+of earth was covered in ice 650-700 million years ago. There have been many hypotheses about 
+whether or not it would even be possible for earth to become a complete “snowball.” This 
+hypothesis is hard to believe because this would mean the entire earth is glaciated, which would 
+mean there is no exposed liquid water or land. Getting out of this state has been said to be 
+“impossible” by many scientists. Throughout this report, we will discuss whether or not the 
+formation of snowball Earth is possible and stable. 
+
+HYPOTHESES
+----------
+1. Validate model with Figure 1 in Dan's lab report
+2. Reproduce warm-Earth equilibrium. Report findings. 
+3. What is the equilibrium solution for a “hot” Earth?
+4. What is the equilibrium solution for a “cold” Earth?
+5. What is the equilibrium solution for a “flash freeze” Earth?
+6. How do the three equilibrium solutions above compare to one another? What does it tell us about 
+   the stability of snowfall vs. warm Earth solutions?
+7. Does the snowball Earth hypothesis represent an equilibrium solution that is stable? What does 
+   the plot tell us about the stability of the different equilibria? 
+8. Given the large range of γ and considering the historical variation of So, is the idea of Snowball 
+   Earth a valid hypothesis?
+
+TO REPRODUCE THE PLOTS IN MY REPORT, DO THIS:
+---------------------------------------------
+Figure 1: 
+    1. Run lab05.py
+    2. Type 'problem1()' into terminal
+Figure 2: 
+    1. Run lab05.py
+    2. Type 'problem2()' into terminal
+
+
 '''
 
 import numpy as np
@@ -111,7 +142,7 @@ def insolation(S0, lats):
     insolation = S0_avg * insolation / 365
     return insolation
 
-def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.,
+def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.0,
                    init_cond=temp_warm, apply_spherecorr = False, 
                    apply_insol = False, solar = 1370., albice = 0.6, albgnd = 0.3):
     ''' 
@@ -249,7 +280,7 @@ def problem1():
     fig, ax = plt.subplots(1, 1)
     ax.plot(lats - 90, temp_init, label = 'Initial condition')
     ax.plot(lats - 90, temp_diff, label = 'Diffusion only')
-    ax.plot(lats - 90, temp_sphere, label = 'Diffusion + Spherical Coor.')
+    ax.plot(lats - 90, temp_sphere, label = 'Diffusion + Spherical Corr.')
     ax.plot(lats - 90, temp_all, label = 'Diffusion + Spherical Corr. + Radiative')
     # Customize 
     ax.set_title('Solution after 10,000 years')
@@ -258,6 +289,34 @@ def problem1():
     ax.legend(loc = 'best')
     plt.show()
 
+def problem2():
+    '''
+    Create solution figure for problem 1. Also validate our code 
+    qualitatively.
+    '''
+
+    # Get warm Earth initial condition
+    dlat, lats = gen_grid()
+    temp_init = temp_warm(lats)
+
+    # Get solution after 10K years for each combination of terms
+    lats, temp_diff = snowball_earth()
+    lats, temp_sphere = snowball_earth(apply_spherecorr=True)
+    lats, temp_all = snowball_earth(apply_spherecorr = True, apply_insol = True,   
+                                    albice=0.3, lam = 55., emiss = 0.72)
+
+    # Create a fancy plot
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(lats - 90, temp_init, label = 'Initial condition')
+    ax.plot(lats - 90, temp_diff, label = 'Diffusion only')
+    ax.plot(lats - 90, temp_sphere, label = 'Diffusion + Spherical Corr.')
+    ax.plot(lats - 90, temp_all, label = 'Diffusion + Spherical Corr. + Radiative')
+    # Customize 
+    ax.set_title('Solution after 10,000 years')
+    ax.set_ylabel(r'Temp (${\circ}C$)')
+    ax.set_xlabel('Latitude')
+    ax.legend(loc = 'best')
+    plt.show()
 
 def test_functions():
     '''
