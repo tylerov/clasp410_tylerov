@@ -31,7 +31,12 @@ Figure 1:
 Figure 2: 
     1. Run lab05.py
     2. Type 'problem2()' into terminal
-
+Figure 3:
+    1. Run lab05.py
+    2. Type 'problem3()' into terminal
+Figure 4:
+    1. run lab05.py
+    2. Type 'problem4()' into terminal
 
 '''
 
@@ -71,7 +76,7 @@ def gen_grid(npoints=18):
 
 def temp_warm(lats_in):
     '''
-    Create a temperature profile for modern day "warm" earth.
+    Create a temperature profile for real life "warm" earth.
     Parameters
     ----------
     lats_in : Numpy array
@@ -93,6 +98,66 @@ def temp_warm(lats_in):
 
     # Fit a parabola to the above values
     coeffs = np.polyfit(lats, T_warm, 2)
+
+    # Now, return fitting sampled at "lats".
+    temp = coeffs[2] + coeffs[1]*lats_in + coeffs[0] * lats_in**2
+
+    return temp
+
+def temp_hot(lats_in):
+    '''
+    Create a temperature profile for possible "hot" earth.
+    Parameters
+    ----------
+    lats_in : Numpy array
+    Array of latitudes in degrees where temperature is required.
+    0 corresponds to the south pole, 180 to the north.
+    Returns
+    -------
+    temp : Numpy array
+    Temperature in Celcius.
+    '''
+
+    # Set initial temperature curve
+    T_hot = np.array([60, 60, 60, 60, 60, 60, 60, 60, 60, 60,
+                       60, 60, 60, 60, 60, 60, 60, 60])
+
+    # Get base grid:
+    npoints = T_hot.size
+    dlat, lats = gen_grid(npoints)
+
+    # Fit a parabola to the above values
+    coeffs = np.polyfit(lats, T_hot, 2)
+
+    # Now, return fitting sampled at "lats".
+    temp = coeffs[2] + coeffs[1]*lats_in + coeffs[0] * lats_in**2
+
+    return temp
+
+def temp_cold(lats_in):
+    '''
+    Create a temperature profile for possible "cold" earth.
+    Parameters
+    ----------
+    lats_in : Numpy array
+    Array of latitudes in degrees where temperature is required.
+    0 corresponds to the south pole, 180 to the north.
+    Returns
+    -------
+    temp : Numpy array
+    Temperature in Celcius.
+    '''
+
+    # Set initial temperature curve
+    T_cold = np.array([-60, -60, -60, -60, -60, -60, -60, -60, -60, -60,
+                       -60, -60, -60, -60, -60, -60, -60, -60])
+
+    # Get base grid:
+    npoints = T_cold.size
+    dlat, lats = gen_grid(npoints)
+
+    # Fit a parabola to the above values
+    coeffs = np.polyfit(lats, T_cold, 2)
 
     # Now, return fitting sampled at "lats".
     temp = coeffs[2] + coeffs[1]*lats_in + coeffs[0] * lats_in**2
@@ -143,7 +208,7 @@ def insolation(S0, lats):
     return insolation
 
 def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.0,
-                   init_cond=temp_warm, apply_spherecorr = False, 
+                   init_cond=temp_warm, apply_spherecorr = False,
                    apply_insol = False, solar = 1370., albice = 0.6, albgnd = 0.3):
     ''' 
     Solve the snowball Earth problem. 
@@ -260,6 +325,235 @@ def snowball_earth(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.0,
 
     return lats, Temp
 
+def snowball_earth_dynamic(nlat = 18, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.0,
+                   init_cond=temp_warm, apply_spherecorr = False,
+                   apply_insol = False, solar = 1370., albice = 0.6, albgnd = 0.3):
+    ''' 
+    Solve the snowball Earth problem with a dynamic albedo 
+
+    Parameters:
+    -----------
+    nlat: int, defaults to 18
+        Number of latitude cells.
+    tfinal: int or float, defaults to 10,000
+        Time length of simulation in years
+    dt: int or float, defaults to 1.0
+        Size of time step in years
+    lam: float, defaults to 100
+        Set ocean diffusivity
+    emiss: float, defaults to 1.0
+        Set emissivity of Earth
+    init_cond: function, float, or array
+        Set the initial condition of the smulation. If a function is given,
+        it must take latitudes as inputs and return temperature as a function
+        of lat. Otherwise, the given values are used as is. 
+    apply_spherecorr: Bool, defaults to False
+        Apply spherical correction term
+    apply_insol: Bool, defaults to False
+        Apply insolation term
+    solar: float, defaults to 1370
+        Set level of solar forcing in W/m^2
+    albice: float, defaults to 0.6
+        Albedo of ice
+    albgnd: float, defaults to 0.3
+        Albedo of ground
+    
+    Returns:
+    ---------
+    Lats: numpy array
+        Latitudes representing cell centers in degrees; 0 is south pole
+        and 180 is north.
+    Temp: Numpy array
+        Temperature as a function of latitude
+    '''
+    # Parameters for smooth dynamic albedo
+    Tcrit = -10.0    # temperature where ice/ground transition occurs
+    dT = 3.0         # width of transition zone
+    
+    # Smooth fractional ice function
+    def ice_fraction_from_temp(T):
+        return 1.0 / (1.0 + np.exp((T - Tcrit) / dT))
+
+    # Set up grid:
+    dlat, lats = gen_grid(nlat)
+    dy = np.pi * radearth / nlat
+
+    nsteps = int(tfinal / dt)
+    dt = dt * 365 * 24 * 3600   # convert years to seconds
+
+    # Insolation
+    insol = insolation(solar, lats)
+
+    # Initial temperature
+    if callable(init_cond):
+        Temp = init_cond(lats)
+    else:
+        Temp = np.array(init_cond, dtype=float)
+
+    # Diffusion matrix K
+    K = np.zeros((nlat, nlat))
+    K[np.arange(nlat), np.arange(nlat)] = -2
+    K[np.arange(nlat-1)+1, np.arange(nlat-1)] = 1
+    K[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    K[0,1] = K[-1,-2] = 2
+    K *= 1/dy**2
+
+    # First-derivative operator B
+    B = np.zeros((nlat, nlat))
+    B[np.arange(nlat-1)+1, np.arange(nlat-1)] = -1
+    B[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    B[0,:] = B[-1,:] = 0
+
+    # Cell area and derivative
+    Axz = np.pi * ((radearth + 50.0)**2 - radearth**2) * np.sin(np.pi/180.*lats)
+    dAxz = np.matmul(B, Axz)
+
+    # Invert (I - dt*K*lam)
+    Linv = np.linalg.inv(np.eye(nlat) - dt * lam * K)
+
+    # INITIAL dynamic albedo
+    ice_frac = ice_fraction_from_temp(Temp)
+    albedo = albgnd * (1 - ice_frac) + albice * ice_frac
+
+    # ---- TIME STEPPING ----
+    for istep in range(nsteps):
+
+        # Update fractional ice and albedo (MINIMAL CHANGE)
+        ice_frac = ice_fraction_from_temp(Temp)
+        albedo = albgnd * (1 - ice_frac) + albice * ice_frac
+
+        # Spherical correction
+        if apply_spherecorr:
+            spherecorr = (lam * dt) / (4 * Axz * dy**2) * np.matmul(B, Temp) * dAxz
+        else:
+            spherecorr = 0
+
+        # Radiative balance (uses the new dynamic albedo)
+        if apply_insol:
+            radiative = (1 - albedo) * insol - emiss * sigma * (Temp + 273.15)**4
+            Temp += dt * radiative / (rho * C * mxdlyr)
+
+        # Diffusion step
+        Temp = np.matmul(Linv, Temp + spherecorr)
+
+    return lats, Temp
+
+def snowball_earth_gamma(nlat = 36, tfinal = 10000., dt = 1.0, lam = 100., emiss=1.0,
+                   init_cond=temp_warm, apply_spherecorr = False, gamma = 1.0,
+                   apply_insol = False, solar = 1370., albice = 0.6, albgnd = 0.3):
+    ''' 
+    Solve the snowball Earth problem with a dynamic albedo, and add our solar multiplier
+    (gamma) 
+
+    Parameters:
+    -----------
+    nlat: int, defaults to 18
+        Number of latitude cells.
+    tfinal: int or float, defaults to 10,000
+        Time length of simulation in years
+    dt: int or float, defaults to 1.0
+        Size of time step in years
+    lam: float, defaults to 100
+        Set ocean diffusivity
+    emiss: float, defaults to 1.0
+        Set emissivity of Earth
+    init_cond: function, float, or array
+        Set the initial condition of the smulation. If a function is given,
+        it must take latitudes as inputs and return temperature as a function
+        of lat. Otherwise, the given values are used as is. 
+    apply_spherecorr: Bool, defaults to False
+        Apply spherical correction term
+    gamma: float, defaults to 1
+        Size of solar multiplier
+    apply_insol: Bool, defaults to False
+        Apply insolation term
+    solar: float, defaults to 1370
+        Set level of solar forcing in W/m^2
+    albice: float, defaults to 0.6
+        Albedo of ice
+    albgnd: float, defaults to 0.3
+        Albedo of ground
+    
+    Returns:
+    ---------
+    Lats: numpy array
+        Latitudes representing cell centers in degrees; 0 is south pole
+        and 180 is north.
+    Temp: Numpy array
+        Temperature as a function of latitude
+    '''
+    # Parameters for smooth dynamic albedo
+    Tcrit = -10.0    # temperature where ice/ground transition occurs
+    dT = 3.0         # width of transition zone
+    
+    # Smooth fractional ice function
+    def ice_fraction_from_temp(T):
+        return 1.0 / (1.0 + np.exp((T - Tcrit) / dT))
+
+    # Set up grid:
+    dlat, lats = gen_grid(nlat)
+    dy = np.pi * radearth / nlat
+
+    nsteps = int(tfinal / dt)
+    dt = dt * 365 * 24 * 3600 # convert years to seconds
+
+    # Insolation (featuring solar multiplier)
+    insol = gamma * insolation(solar, lats)
+
+    # Initial temperature
+    if callable(init_cond):
+        Temp = init_cond(lats)
+    else:
+        Temp = np.array(init_cond, dtype=float)
+
+    # Diffusion matrix K
+    K = np.zeros((nlat, nlat))
+    K[np.arange(nlat), np.arange(nlat)] = -2
+    K[np.arange(nlat-1)+1, np.arange(nlat-1)] = 1
+    K[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    K[0,1] = K[-1,-2] = 2
+    K *= 1/dy**2
+
+    # First-derivative operator B
+    B = np.zeros((nlat, nlat))
+    B[np.arange(nlat-1)+1, np.arange(nlat-1)] = -1
+    B[np.arange(nlat-1), np.arange(nlat-1)+1] = 1
+    B[0,:] = B[-1,:] = 0
+
+    # Cell area and derivative
+    Axz = np.pi * ((radearth + 50.0)**2 - radearth**2) * np.sin(np.pi/180.*lats)
+    dAxz = np.matmul(B, Axz)
+
+    # Invert (I - dt*K*lam)
+    Linv = np.linalg.inv(np.eye(nlat) - dt * lam * K)
+
+    # INITIAL dynamic albedo
+    ice_frac = ice_fraction_from_temp(Temp)
+    albedo = albgnd * (1 - ice_frac) + albice * ice_frac
+
+    # ---- TIME STEPPING ----
+    for istep in range(nsteps):
+
+        # Update fractional ice and albedo (MINIMAL CHANGE)
+        ice_frac = ice_fraction_from_temp(Temp)
+        albedo = albgnd * (1 - ice_frac) + albice * ice_frac
+
+        # Spherical correction
+        if apply_spherecorr:
+            spherecorr = (lam * dt) / (4 * Axz * dy**2) * np.matmul(B, Temp) * dAxz
+        else:
+            spherecorr = 0
+
+        # Radiative balance (uses the new dynamic albedo)
+        if apply_insol:
+            radiative = (1 - albedo) * insol - emiss * sigma * (Temp + 273.15)**4
+            Temp += dt * radiative / (rho * C * mxdlyr)
+
+        # Diffusion step
+        Temp = np.matmul(Linv, Temp + spherecorr)
+
+    return lats, Temp
+
 def problem1():
     '''
     Create solution figure for problem 1. Also validate our code 
@@ -291,7 +585,7 @@ def problem1():
 
 def problem2():
     '''
-    Create solution figure for problem 1. Also validate our code 
+    Create solution figure for problem 2. Also validate our code 
     qualitatively.
     '''
 
@@ -317,6 +611,89 @@ def problem2():
     ax.set_xlabel('Latitude')
     ax.legend(loc = 'best')
     plt.show()
+
+def problem3():
+    '''
+    Create solution figure for problem 3. 
+    '''
+    # dynamic-albedo experiments for hot and cold
+    lats, T_hot = snowball_earth_dynamic(init_cond=temp_hot,
+                                  apply_insol=True,  lam = 55., emiss = 0.72, 
+                                  apply_spherecorr=True)
+
+    lats, T_cold = snowball_earth_dynamic(init_cond=temp_cold,
+                                  apply_insol=True,  lam = 55., emiss = 0.72,
+                                  apply_spherecorr=True)
+
+    # flash freeze: constant albedo = 0.6
+    lats, T_flash = snowball_earth_dynamic(albice=0.6, albgnd=0.6,  # forces constant albedo
+                                  apply_insol=True, lam = 55., emiss = 0.72,
+                                  apply_spherecorr=True)
+
+    # plot our data
+    plt.figure(figsize=(10,5))
+    temp_warm_curve = temp_warm(lats)
+    plt.plot(lats-90, temp_warm_curve, label="Warm curve (initial for flash-freeze)")
+    plt.plot(lats-90, T_hot,   label="Hot start (dynamic albedo)")
+    plt.plot(lats-90, T_cold,  label="Cold start (dynamic albedo)")
+    plt.plot(lats-90, T_flash, label="Flash freeze (constant albedo=0.6)")
+    plt.xlabel("Latitude (deg)")
+    plt.ylabel("Equilibrium Temperature (°C)")
+    plt.title("Dynamic Albedo Snowball Earth Equilibria")
+    plt.legend()
+    plt.grid()
+    plt.show()
+
+    # Means for precise values for my report
+    print("Hot-start equilibrium mean temp:", np.mean(T_hot))
+    print("Cold-start equilibrium mean temp:", np.mean(T_cold))
+    print("Flash-freeze equilibrium mean temp:", np.mean(T_flash))
+
+def problem4():
+    '''
+    Create solution figure for problem 4. 
+    '''
+    # Make array for steps in Gamma
+    gammas_forward = np.arange(0.40, 1.401, 0.05)
+    gammas_backward = np.arange(1.35, 0.39, -0.05)
+    
+    # Define Arrays
+    mean_forward = []
+    mean_backward = []
+
+    # Set initial temperature
+    init_temp = np.ones(36) * (-60)
+
+    # Loop for forward gamma 
+    for g in gammas_forward:
+        lats, T = snowball_earth_gamma(init_cond=lambda x: init_temp.copy(), gamma=g,
+                                       apply_insol = True, tfinal = 200, dt = 1/120,
+                                       lam = 55., emiss = 0.72)
+        mean_forward.append(np.mean(T))
+        init_temp = T.copy()
+
+    init_temp = T.copy()
+     
+    # Loop for backward gamma
+    for g in gammas_backward:
+        lats, T = snowball_earth_gamma(init_cond=lambda x: init_temp, gamma=g, 
+                                       apply_insol = True, tfinal = 200, dt = 1/120,
+                                       lam = 55., emiss = 0.72)
+        mean_backward.append(np.mean(T))
+        init_temp = T.copy()
+
+    # Plot our data
+    plt.figure(figsize=(10,5))
+    plt.plot(gammas_forward, mean_forward, 'o-', label='Forward sweep')
+    plt.plot(gammas_backward, mean_backward, 'o-', label='Backward sweep')
+    plt.xlabel("Solar multiplier γ")
+    plt.ylabel("Global mean temperature (°C)")
+    plt.title("Hysteresis in Snowball Earth vs Solar Forcing")
+    plt.grid()
+    plt.legend()
+    plt.show()
+
+    return gammas_forward, mean_forward, gammas_backward, mean_backward
 
 def test_functions():
     '''
